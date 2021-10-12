@@ -19,6 +19,9 @@ from typing import Any, Mapping, Optional
 from alphafold.common import residue_constants
 from Bio.PDB import PDBParser
 import numpy as np
+from string import ascii_uppercase,ascii_lowercase
+
+CHAIN_IDs = ascii_uppercase+ascii_lowercase
 
 FeatureDict = Mapping[str, np.ndarray]
 ModelOutput = Mapping[str, Any]  # Is a nested dict.
@@ -190,6 +193,7 @@ def to_pdb(prot: Protein) -> str:
       atom_index += 1  # Atom index increases at the TER symbol.
 
     res_name_3 = res_1to3(aatype[i])
+    #
     for atom_name, pos, mask, b_factor in zip(
         atom_types, atom_positions[i], atom_mask[i], b_factors[i]):
       if mask < 0.5:
@@ -205,7 +209,7 @@ def to_pdb(prot: Protein) -> str:
       # PDB is a columnar format, every space matters here!
       atom_line = (f'{record_type:<6}{atom_index:>5} {name:<4}{alt_loc:>1}'
                    f'{res_name_3:>3} {chain_ids[chain_index[i]]:>1}'
-                   f'{residue_index[i]:>4}{insertion_code:>1}   '
+                   f'{res_num:>4}{insertion_code:>1}   '
                    f'{pos[0]:>8.3f}{pos[1]:>8.3f}{pos[2]:>8.3f}'
                    f'{occupancy:>6.2f}{b_factor:>6.2f}          '
                    f'{element:>2}{charge:>2}')
