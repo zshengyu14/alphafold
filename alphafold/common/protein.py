@@ -146,6 +146,7 @@ def _chain_end(atom_index, end_resname, chain_name, residue_index) -> str:
           f'{chain_name:>1}{residue_index:>4}')
 
 
+
 def to_pdb(prot: Protein) -> str:
   """Converts a `Protein` instance to a PDB string.
 
@@ -193,7 +194,6 @@ def to_pdb(prot: Protein) -> str:
       atom_index += 1  # Atom index increases at the TER symbol.
 
     res_name_3 = res_1to3(aatype[i])
-    #
     for atom_name, pos, mask, b_factor in zip(
         atom_types, atom_positions[i], atom_mask[i], b_factors[i]):
       if mask < 0.5:
@@ -209,7 +209,7 @@ def to_pdb(prot: Protein) -> str:
       # PDB is a columnar format, every space matters here!
       atom_line = (f'{record_type:<6}{atom_index:>5} {name:<4}{alt_loc:>1}'
                    f'{res_name_3:>3} {chain_ids[chain_index[i]]:>1}'
-                   f'{res_num:>4}{insertion_code:>1}   '
+                   f'{residue_index[i]:>4}{insertion_code:>1}   '
                    f'{pos[0]:>8.3f}{pos[1]:>8.3f}{pos[2]:>8.3f}'
                    f'{occupancy:>6.2f}{b_factor:>6.2f}          '
                    f'{element:>2}{charge:>2}')
@@ -225,7 +225,6 @@ def to_pdb(prot: Protein) -> str:
   # Pad all lines to 80 characters.
   pdb_lines = [line.ljust(80) for line in pdb_lines]
   return '\n'.join(pdb_lines) + '\n'  # Add terminating newline.
-
 
 def ideal_atom_mask(prot: Protein) -> np.ndarray:
   """Computes an ideal atom mask.
