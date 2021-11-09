@@ -595,7 +595,7 @@ def merge_chain_features(np_chains_list: List[pipeline.FeatureDict],
   """
   np_chains_list = _pad_templates(
       np_chains_list, max_templates=max_templates)
-  #np_chains_list = _merge_homomers_dense_msa(np_chains_list)
+  np_chains_list = _merge_homomers_dense_msa(np_chains_list)
   # Unpaired MSA features will be always block-diagonalised; paired MSA
   # features will be concatenated.
   np_example = _merge_features_from_multiple_chains(
