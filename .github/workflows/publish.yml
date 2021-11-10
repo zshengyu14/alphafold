@@ -1,0 +1,23 @@
+# Doesn't actually publish yet, only builds the wheels
+
+name: WIP Publish to PyPI
+
+on:
+  push:
+    tags:
+      - v*.*.*
+      - v*.*.*-*
+
+jobs:
+  release-pypi:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install tools
+        run: pip install -U pip build twine
+      - name: Build
+        run: python -m build
