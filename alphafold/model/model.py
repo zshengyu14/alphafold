@@ -149,7 +149,7 @@ class RunModel:
 
   def predict(self,
               feat: features.FeatureDict,
-              random_seed: int,
+              random_seed: int = 0,
               ) -> Mapping[str, Any]:
     """Makes a prediction by inferencing the model on the provided features.
 
