@@ -1,6 +1,4 @@
-# Doesn't actually publish yet, only builds the wheels
-
-name: WIP Publish to PyPI
+name: Publish to PyPI
 
 on:
   push:
@@ -20,4 +18,8 @@ jobs:
       - name: Install tools
         run: pip install -U pip build twine
       - name: Build
-        run: python -m build
+        run: python -m build --sdist --wheel --outdir dist/
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.PYPI_TOKEN }}
