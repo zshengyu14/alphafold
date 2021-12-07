@@ -490,7 +490,7 @@ class AlphaFold(hk.Module):
 
     if not return_representations:
       del ret['representations']
-    return ret, (None, None)
+    return ret, (self.config.num_recycle, None)
 
 
 class EmbeddingsAndEvoformer(hk.Module):
