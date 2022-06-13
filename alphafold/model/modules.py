@@ -366,39 +366,15 @@ class AlphaFold(hk.Module):
         # Eval mode or tests: use the maximum number of iterations.
         num_iter = self.config.num_recycle
 
-      def pw_dist(a):
-        a_norm = jnp.square(a).sum(-1)
-        return jnp.sqrt(jnp.abs(a_norm[:,None] + a_norm[None,:] - 2 * a @ a.T))
+    def body(p, i):
+        p_ = get_prev(do_call(p, recycle_idx=i, compute_loss=False))
+        return p_, None
 
-      def body(x):
-        n, tol, _, prev = x
-        prediction = do_call(prev, recycle_idx=n, compute_loss=False)
-        confidences = confidence_jax.get_confidence_metrics(prediction, multimer_mode=self.config.global_config.multimer_mode)
-        # Get score for early stopping
-        if self.config.stop_at_score_ranker == "plddt":
-          # Masked mean, jax compatible
-          mean_score = (confidences["plddt"] * batch["seq_mask"]).sum() / batch["seq_mask"].sum()
-        else:
-          mean_score = confidences["ptm"].mean()
-        prev_ = get_prev(prediction)
-        ca, ca_ = prev["prev_pos"][:,1,:], prev_["prev_pos"][:,1,:]
-        tol_ = jnp.sqrt(jnp.square(pw_dist(ca) - pw_dist(ca_)).mean())
-        return n+1, tol_, mean_score, prev_
-
-      if hk.running_init():
-        # When initializing the Haiku module, run one iteration of the
-        # while_loop to initialize the Haiku modules used in `body`.
-        recycles, tol, _, prev = body((0, jnp.inf, 0, prev))
-      else:
-        recycles, tol, _, prev = hk.while_loop(
-          # Stop when we reached the given number of recycles,
-          # or had less than a certain change since the last check (optional settings),
-          # or the chosen score is above the given threshold (optional setting)
-          lambda x: ((x[0] < num_iter) & (x[1] > self.config.recycle_tol)) & (x[2] < self.config.stop_at_score),
-          body,(0, jnp.inf, 0, prev))
+    if hk.running_init():
+        prev, _ = body(prev, 0)
     else:
-      num_iter = 0
-      (recycles,tol) = 0, jnp.inf
+        prev, _ = hk.scan(body, prev, jnp.arange(num_iter))
+
 
     ret = do_call(prev=prev, recycle_idx=num_iter)
     if compute_loss:
@@ -406,7 +382,7 @@ class AlphaFold(hk.Module):
 
     if not return_representations:
       del (ret[0] if compute_loss else ret)['representations']  # pytype: disable=unsupported-operands
-    return ret, (recycles,tol)
+    return ret, num_iter
 
 
 class TemplatePairStack(hk.Module):
