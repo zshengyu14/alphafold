@@ -354,7 +354,7 @@ class AlphaFold(hk.Module):
     if not return_representations:
       del (ret[0] if compute_loss else ret)['representations']  # pytype: disable=unsupported-operands
       
-    return ret, 0
+    return ret
 
 
 class TemplatePairStack(hk.Module):
