@@ -169,10 +169,9 @@ class RunModel:
     aatype = feat["aatype"]
     num_recycles, L = aatype.shape[:2]
     
-    result = {"prev":{'prev_msa_first_row': np.zeros([1,L,256]),
-                      'prev_pair': np.zeros([1,L,L,128]),
-                      'prev_pos': np.zeros([1,L,37,3])}}
-    
+    result = {"prev":{'prev_msa_first_row': np.zeros([L,256]),
+                      'prev_pair': np.zeros([L,L,128]),
+                      'prev_pos': np.zeros([L,37,3])}}
     r = 0
     key = jax.random.PRNGKey(random_seed)
     while r < num_recycles:
