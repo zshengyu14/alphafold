@@ -167,15 +167,23 @@ class RunModel:
                  tree.map_structure(lambda x: x.shape, feat))
     
     aatype = feat["aatype"]
-    num_recycles, L = aatype.shape[:2]
+    if self.multimer_mode:
+      num_recycles = self.config.model.num_recycle
+      L = aatype.shape[0]
+    else:
+      num_recycles, L = aatype.shape[:2]
     
     result = {"prev":{'prev_msa_first_row': np.zeros([L,256]),
                       'prev_pair': np.zeros([L,L,128]),
                       'prev_pos': np.zeros([L,37,3])}}
+        
     r = 0
     key = jax.random.PRNGKey(random_seed)
     while r < num_recycles:
-        sub_feat = jax.tree_map(lambda x:x[r,None], feat)
+        if self.multimer_mode:
+          sub_feat = feat
+        else:
+          sub_feat = jax.tree_map(lambda x:x[r,None], feat)
         sub_feat["prev"] = result["prev"]
         key, sub_key = jax.random.split(key)
         result, _ = self.apply(self.params, sub_key, sub_feat)
