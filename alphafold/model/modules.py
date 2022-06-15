@@ -150,7 +150,6 @@ class AlphaFoldIteration(hk.Module):
       assert ensembled_batch['seq_length'].shape[0] == 1
 
     def slice_batch(i):
-      print 
       b = {k: v[i] for k, v in ensembled_batch.items()}
       b.update(non_ensembled_batch)
       return b
