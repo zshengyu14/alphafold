@@ -165,13 +165,25 @@ class RunModel:
     self.init_params(feat)
     logging.info('Running predict with shape(feat) = %s',
                  tree.map_structure(lambda x: x.shape, feat))
-    result, recycles = self.apply(self.params, jax.random.PRNGKey(random_seed), feat)
-    # This block is to ensure benchmark timings are accurate. Some blocking is
-    # already happening when computing get_confidence_metrics, and this ensures
-    # all outputs are blocked on.
-    jax.tree_map(lambda x: x.block_until_ready(), result)
-    result.update(
-        get_confidence_metrics(result, multimer_mode=self.multimer_mode))
-    logging.info('Output shape was %s',
-                 tree.map_structure(lambda x: x.shape, result))
-    return result, recycles
+    
+    aatype = feat["aatype"]
+    num_recycles, L = aatype.shape[:2]
+    
+    r = -1
+    key = jax.random.PRNGKey(random_seed)
+    while r < num_recycles:
+        sub_feat = jax.tree_map(x:x[r,None], feat)
+        if r == 0:
+            sub_feat["prev"] = {'prev_msa_first_row': np.zeros([1,L,256]),
+                                'prev_pair': np.zeros([1,L,L,128]),
+                                'prev_pos': np.zeros([1,L,37,3])}
+        else:
+            sub_feat["prev"] = results["prev"]
+        
+        key, sub_key = jax.random.split(key)
+        result, _ = self.apply(self.params, sub_key, sub_feat)
+        result.update(get_confidence_metrics(result, multimer_mode=self.multimer_mode))
+        r += 1
+    
+    logging.info('Output shape was %s', tree.map_structure(lambda x: x.shape, result))
+    return result, r
