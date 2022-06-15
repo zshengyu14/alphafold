@@ -171,15 +171,12 @@ class RunModel:
     
     r = -1
     key = jax.random.PRNGKey(random_seed)
+    result = {"prev":{'prev_msa_first_row': np.zeros([1,L,256]),
+                      'prev_pair': np.zeros([1,L,L,128]),
+                      'prev_pos': np.zeros([1,L,37,3])}}
     while r < num_recycles:
         sub_feat = jax.tree_map(x:x[r,None], feat)
-        if r == 0:
-            sub_feat["prev"] = {'prev_msa_first_row': np.zeros([1,L,256]),
-                                'prev_pair': np.zeros([1,L,L,128]),
-                                'prev_pos': np.zeros([1,L,37,3])}
-        else:
-            sub_feat["prev"] = results["prev"]
-        
+        sub_feat["prev"] = result["prev"]        
         key, sub_key = jax.random.split(key)
         result, _ = self.apply(self.params, sub_key, sub_feat)
         result.update(get_confidence_metrics(result, multimer_mode=self.multimer_mode))
