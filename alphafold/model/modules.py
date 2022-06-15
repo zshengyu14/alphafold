@@ -342,11 +342,9 @@ class AlphaFold(hk.Module):
           ensemble_representations=ensemble_representations)
 
     emb_config = self.config.embeddings_and_evoformer    
-    prev = jax.tree_map(lambda x:x[0], batch.pop("prev"))
+    prev = batch.pop("prev")
     ret = do_call(prev=prev, recycle_idx=0)
-    ret["prev"] = {'prev_pos': ret['structure_module']['final_atom_positions'][None],
-                   'prev_msa_first_row': ret['representations']['msa_first_row'][None],
-                   'prev_pair': ret['representations']['pair'][None]}
+    ret["prev"] = get_prev(ret)
     
     if compute_loss:
       ret = ret[0], [ret[1]]
