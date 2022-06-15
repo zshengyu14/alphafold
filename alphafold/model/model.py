@@ -187,8 +187,15 @@ class RunModel:
             sub_feat = jax.tree_map(lambda x:x[r,None], feat)
         sub_feat["prev"] = result["prev"]
         result, _ = self.apply(self.params, key, sub_feat)
-        result.update(get_confidence_metrics(result, multimer_mode=self.multimer_mode))
+        confidences = get_confidence_metrics(result, multimer_mode=self.multimer_mode)
+        if self.config.model.stop_at_score_ranker == "plddt":
+          mean_score = (confidences["plddt"] * feat["seq_mask"]).sum() / feat["seq_mask"].sum()
+        else:
+          mean_score = confidences["ptm"].mean()
+        result.update(confidences)
         r += 1
-    
+        if mean_score > self.config.model.stop_at_score:
+            break
+
     logging.info('Output shape was %s', tree.map_structure(lambda x: x.shape, result))
-    return result, [r-1]
+    return result, (r-1)
