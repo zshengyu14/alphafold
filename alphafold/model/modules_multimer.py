@@ -449,23 +449,23 @@ class AlphaFold(hk.Module):
           batch=recycled_batch,
           is_training=is_training,
           safe_key=safe_key)
-
-    prev = batch.pop("prev")
-
-    # adding some logic to make sure same keys are used
-    #num_iter = c.num_recycle
-    #def key_body(i, safe_key):
-    #  k1,k2 = safe_key.split() if c.resample_msa_in_recycling else safe_key.duplicate()  # pylint: disable=line-too-long
-    #  return jax.lax.cond(jnp.equal(num_iter,i),lambda:k1,lambda:k2)
-    #safe_key = hk.fori_loop(0, batch.pop("iter"), key_body, safe_key)
     
-    ret = apply_network(prev=prev, safe_key=safe_key)
+    #########################################
+    num_iter = c.num_recycle
+    def key_body(i, k):
+      k_ = jax.random.split(k[0])
+      o = jax.lax.cond(i==num_iter, lambda:k[0], lambda:k_[1])
+      return [k_[0],o]
+    k = safe_key.get()
+    safe_key = prng.SafeKey(jax.lax.fori_loop(0,batch.pop(["iter"])+1, key_body, [k,k])[1])
+    ##########################################
+    
+    ret = apply_network(prev=batch.pop("prev"), safe_key=safe_key)
     ret["prev"] = get_prev(ret)
     
     if not return_representations:
       del ret['representations']
     return ret, None
-
 
 class EmbeddingsAndEvoformer(hk.Module):
   """Embeds the input data and runs Evoformer.
