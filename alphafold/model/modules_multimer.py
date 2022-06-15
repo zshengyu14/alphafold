@@ -437,8 +437,7 @@ class AlphaFold(hk.Module):
 
     def get_prev(ret):
       new_prev = {
-          'prev_pos':
-              ret['structure_module']['final_atom_positions'],
+          'prev_pos': ret['structure_module']['final_atom_positions'],
           'prev_msa_first_row': ret['representations']['msa_first_row'],
           'prev_pair': ret['representations']['pair'],
       }
@@ -451,42 +450,10 @@ class AlphaFold(hk.Module):
           is_training=is_training,
           safe_key=safe_key)
 
-    prev = {}
-    emb_config = self.config.embeddings_and_evoformer
-    if emb_config.recycle_pos:
-      prev['prev_pos'] = jnp.zeros(
-          [num_res, residue_constants.atom_type_num, 3])
-    if emb_config.recycle_features:
-      prev['prev_msa_first_row'] = jnp.zeros(
-          [num_res, emb_config.msa_channel])
-      prev['prev_pair'] = jnp.zeros(
-          [num_res, num_res, emb_config.pair_channel])
-
-    if self.config.num_recycle:
-      if 'num_iter_recycling' in batch:
-        # Training time: num_iter_recycling is in batch.
-        # Value for each ensemble batch is the same, so arbitrarily taking 0-th.
-        num_iter = batch['num_iter_recycling'][0]
-
-        # Add insurance that even when ensembling, we will not run more
-        # recyclings than the model is configured to run.
-        num_iter = jnp.minimum(num_iter, c.num_recycle)
-      else:
-        # Eval mode or tests: use the maximum number of iterations.
-        num_iter = c.num_recycle
-
-      def recycle_body(i, x):
-        del i
-        prev, safe_key = x
-        safe_key1, safe_key2 = safe_key.split() if c.resample_msa_in_recycling else safe_key.duplicate()  # pylint: disable=line-too-long
-        ret = apply_network(prev=prev, safe_key=safe_key2)
-        return get_prev(ret), safe_key1
-
-      prev, safe_key = hk.fori_loop(0, num_iter, recycle_body, (prev, safe_key))
-
-    # Run extra iteration.
+    prev = batch.pop("prev")
     ret = apply_network(prev=prev, safe_key=safe_key)
-
+    ret["prev"] = get_prev(ret)
+    
     if not return_representations:
       del ret['representations']
     return ret, self.config.num_recycle
