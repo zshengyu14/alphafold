@@ -451,6 +451,14 @@ class AlphaFold(hk.Module):
           safe_key=safe_key)
 
     prev = batch.pop("prev")
+
+    # adding some logic to make sure same keys is used
+    num_iter = c.num_recycle
+    def key_body(i, safe_key):
+      k1,k2 = safe_key.split() if c.resample_msa_in_recycling else safe_key.duplicate()  # pylint: disable=line-too-long
+      return jax.lax.cond(jnp.equal(num_iter,i),lambda:k1,lambda:k2)
+    safe_key = jax.lax.fori_loop(0, batch.pop("iter"), key_body, safe_key)
+    
     ret = apply_network(prev=prev, safe_key=safe_key)
     ret["prev"] = get_prev(ret)
     
