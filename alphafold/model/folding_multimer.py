@@ -537,6 +537,7 @@ def generate_monomer_rigids(representations: Mapping[str, jnp.ndarray],
           initial_act=initial_act,
           static_feat_2d=act_2d,
           aatype=batch['aatype'],
+          safe_key=prng.SafeKey(key),
           sequence_mask=sequence_mask,
           update_rigid=True,
           is_training=is_training)
