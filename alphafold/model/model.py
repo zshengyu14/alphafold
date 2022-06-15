@@ -182,10 +182,11 @@ class RunModel:
     while r < num_recycles:
         if self.multimer_mode:
             sub_feat = feat
-            sub_feat["iter"] = r
+            sub_feat["iter"] = np.array(r)
         else:
             sub_feat = jax.tree_map(lambda x:x[r,None], feat)
         sub_feat["prev"] = result["prev"]
+        #key, sub_key = jax.random.split(key)
         result, _ = self.apply(self.params, key, sub_feat)
         result.update(get_confidence_metrics(result, multimer_mode=self.multimer_mode))
         r += 1
