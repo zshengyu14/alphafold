@@ -342,8 +342,7 @@ class AlphaFold(hk.Module):
           ensemble_representations=ensemble_representations)
 
     emb_config = self.config.embeddings_and_evoformer    
-    prev = batch.pop("prev")
-    ret = do_call(prev=prev, recycle_idx=0)
+    ret = do_call(prev=batch.pop("prev"), recycle_idx=0)
     ret["prev"] = get_prev(ret)
     
     if compute_loss:
