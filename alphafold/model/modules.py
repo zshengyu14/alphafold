@@ -311,8 +311,7 @@ class AlphaFold(hk.Module):
 
     def get_prev(ret):
       new_prev = {
-          'prev_pos':
-              ret['structure_module']['final_atom_positions'],
+          'prev_pos': ret['structure_module']['final_atom_positions'],
           'prev_msa_first_row': ret['representations']['msa_first_row'],
           'prev_pair': ret['representations']['pair'],
       }
@@ -341,48 +340,21 @@ class AlphaFold(hk.Module):
           compute_loss=compute_loss,
           ensemble_representations=ensemble_representations)
 
-    prev = {}
     emb_config = self.config.embeddings_and_evoformer
-    if emb_config.recycle_pos:
-      prev['prev_pos'] = jnp.zeros(
-          [num_residues, residue_constants.atom_type_num, 3])
-    if emb_config.recycle_features:
-      prev['prev_msa_first_row'] = jnp.zeros(
-          [num_residues, emb_config.msa_channel])
-      prev['prev_pair'] = jnp.zeros(
-          [num_residues, num_residues, emb_config.pair_channel])
-
-    if self.config.num_recycle:
-      if 'num_iter_recycling' in batch:
-        # Training time: num_iter_recycling is in batch.
-        # The value for each ensemble batch is the same, so arbitrarily taking
-        # 0-th.
-        num_iter = batch['num_iter_recycling'][0]
-
-        # Add insurance that we will not run more
-        # recyclings than the model is configured to run.
-        num_iter = jnp.minimum(num_iter, self.config.num_recycle)
-      else:
-        # Eval mode or tests: use the maximum number of iterations.
-        num_iter = self.config.num_recycle
-
-    def body(p, i):
-        p_ = get_prev(do_call(p, recycle_idx=i, compute_loss=False))
-        return p_, None
-
-    if hk.running_init():
-        prev, _ = body(prev, 0)
-    else:
-        prev, _ = hk.scan(body, prev, jnp.arange(num_iter))
-
-
-    ret = do_call(prev=prev, recycle_idx=num_iter)
+    
+    prev = jax.tree_map(lambda x:x[0], batch["prev"])
+    ret = do_call(prev=prev, recycle_idx=0)
+    ret["prev"] = {'prev_pos': ret['structure_module']['final_atom_positions'][None],
+                   'prev_msa_first_row': ret['representations']['msa_first_row'][None],
+                   'prev_pair': ret['representations']['pair'][None]}
+    
     if compute_loss:
       ret = ret[0], [ret[1]]
-
+      
     if not return_representations:
       del (ret[0] if compute_loss else ret)['representations']  # pytype: disable=unsupported-operands
-    return ret, num_iter
+      
+    return ret, 0
 
 
 class TemplatePairStack(hk.Module):
