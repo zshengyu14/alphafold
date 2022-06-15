@@ -150,6 +150,7 @@ class AlphaFoldIteration(hk.Module):
       assert ensembled_batch['seq_length'].shape[0] == 1
 
     def slice_batch(i):
+      print 
       b = {k: v[i] for k, v in ensembled_batch.items()}
       b.update(non_ensembled_batch)
       return b
@@ -157,6 +158,7 @@ class AlphaFoldIteration(hk.Module):
     # Compute representations for each batch element and average.
     evoformer_module = EmbeddingsAndEvoformer(
         self.config.embeddings_and_evoformer, self.global_config)
+
     batch0 = slice_batch(0)
     representations = evoformer_module(batch0, is_training)
 
@@ -321,7 +323,7 @@ class AlphaFold(hk.Module):
                 recycle_idx,
                 compute_loss=compute_loss):
       if self.config.resample_msa_in_recycling:
-        num_ensemble = batch_size // (self.config.num_recycle + 1)
+        num_ensemble = batch_size
         def slice_recycle_idx(x):
           start = recycle_idx * num_ensemble
           size = num_ensemble
@@ -340,9 +342,8 @@ class AlphaFold(hk.Module):
           compute_loss=compute_loss,
           ensemble_representations=ensemble_representations)
 
-    emb_config = self.config.embeddings_and_evoformer
-    
-    prev = jax.tree_map(lambda x:x[0], batch["prev"])
+    emb_config = self.config.embeddings_and_evoformer    
+    prev = jax.tree_map(lambda x:x[0], batch.pop("prev"))
     ret = do_call(prev=prev, recycle_idx=0)
     ret["prev"] = {'prev_pos': ret['structure_module']['final_atom_positions'][None],
                    'prev_msa_first_row': ret['representations']['msa_first_row'][None],
