@@ -454,7 +454,7 @@ class AlphaFold(hk.Module):
     num_iter = c.num_recycle
     def key_body(i, k):
       k_ = jax.random.split(k[0])
-      o = jax.lax.cond(i==num_iter, lambda:k[0], lambda:k_[1])
+      o = jax.lax.cond(i==num_iter, lambda _:k[0], lambda _:k_[1], None)
       return [k_[0],o]
     k = safe_key.get()
     safe_key = prng.SafeKey(jax.lax.fori_loop(0,batch.pop("iter")+1, key_body, [k,k])[1])
