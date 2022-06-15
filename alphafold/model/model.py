@@ -186,7 +186,6 @@ class RunModel:
         else:
             sub_feat = jax.tree_map(lambda x:x[r,None], feat)
         sub_feat["prev"] = result["prev"]
-        #key, sub_key = jax.random.split(key)
         result, _ = self.apply(self.params, key, sub_feat)
         result.update(get_confidence_metrics(result, multimer_mode=self.multimer_mode))
         r += 1
