@@ -457,7 +457,7 @@ class AlphaFold(hk.Module):
       o = jax.lax.cond(i==num_iter, lambda:k[0], lambda:k_[1])
       return [k_[0],o]
     k = safe_key.get()
-    safe_key = prng.SafeKey(jax.lax.fori_loop(0,batch.pop(["iter"])+1, key_body, [k,k])[1])
+    safe_key = prng.SafeKey(jax.lax.fori_loop(0,batch.pop("iter")+1, key_body, [k,k])[1])
     ##########################################
     
     ret = apply_network(prev=batch.pop("prev"), safe_key=safe_key)
