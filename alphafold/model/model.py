@@ -168,7 +168,7 @@ class RunModel:
     
     aatype = feat["aatype"]
     if self.multimer_mode:
-      num_recycles = self.config.model.num_recycle
+      num_recycles = self.config.model.num_recycle + 1
       L = aatype.shape[0]
     else:
       num_recycles, L = aatype.shape[:2]
