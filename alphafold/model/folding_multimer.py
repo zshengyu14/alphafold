@@ -537,6 +537,7 @@ def generate_monomer_rigids(representations: Mapping[str, jnp.ndarray],
           initial_act=initial_act,
           static_feat_2d=act_2d,
           aatype=batch['aatype'],
+          safe_key=prng.SafeKey(key),
           sequence_mask=sequence_mask,
           update_rigid=True,
           is_training=is_training)
@@ -819,7 +820,7 @@ def compute_frames(
   alt_gt_frames = frames_batch['rigidgroups_alt_gt_frames']
   use_alt = use_alt[:, None]
 
-  renamed_gt_frames = jax.tree_multimap(
+  renamed_gt_frames = jax.tree_map(
       lambda x, y: (1. - use_alt) * x + use_alt * y, gt_frames, alt_gt_frames)
 
   return renamed_gt_frames, frames_batch['rigidgroups_gt_exists']
@@ -1156,4 +1157,3 @@ class MultiRigidSidechain(hk.Module):
         'frames': all_frames_to_global,  # geometry.Rigid3Array (N, 8)
     })
     return outputs
-
