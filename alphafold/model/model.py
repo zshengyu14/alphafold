@@ -188,7 +188,8 @@ class RunModel:
         else:
             s = r * num_ensemble
             e = (r+1) * num_ensemble
-            sub_feat = jax.tree_map(lambda x:x[s:s], feat)
+            sub_feat = jax.tree_map(lambda x:x[s:e], feat)
+            
         sub_feat["prev"] = result["prev"]
         result, _ = self.apply(self.params, key, sub_feat)
         confidences = get_confidence_metrics(result, multimer_mode=self.multimer_mode)
