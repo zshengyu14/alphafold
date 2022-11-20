@@ -70,7 +70,7 @@ def overwrite_b_factors(pdb_str: str, bfactors: np.ndarray) -> str:
   pdb_io.set_structure(structure)
   pdb_io.save(new_pdb)
   res = new_pdb.getvalue()
-  close_workaround(new_pdb)
+  close_workaround()
   return res
 
 
