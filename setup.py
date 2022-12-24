@@ -18,7 +18,7 @@ from setuptools import setup
 
 setup(
     name='alphafold-colabfold',
-    version='2.1.16',
+    version='2.3.0',
     long_description_content_type='text/markdown',
     description='An implementation of the inference pipeline of AlphaFold v2.0.'
     'This is a completely new model that was entered as AlphaFold2 in CASP14 '
@@ -43,7 +43,10 @@ setup(
         'scipy',
         'tensorflow-cpu',
     ],
-    tests_require=['mock'],
+    tests_require=[
+        'matplotlib',  # For notebook_utils_test.
+        'mock',
+    ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Science/Research',
