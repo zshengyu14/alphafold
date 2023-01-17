@@ -134,10 +134,10 @@ CONFIG_DIFFS = {
 common_updates = {
     'model.embeddings_and_evoformer.num_msa': 252,
     'model.embeddings_and_evoformer.num_extra_msa': 1152,
-    'model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights': False,
-    'model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights': False,
-    'model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights': False,
-    'model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights': False,
+    'model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights': True,
+    'model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights': True,
+    'model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights': True,
+    'model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights': True,
 }
 CONFIG_DIFFS.update(
     {f'model_{i}_multimer': common_updates for i in range(1, 6)})
@@ -285,7 +285,7 @@ CONFIG = ml_collections.ConfigDict({
                     'num_intermediate_channel': 128,
                     'orientation': 'per_row',
                     'shared_dropout': True,
-                    'fuse_projection_weights': False,
+                    'fuse_projection_weights': True,
                 },
                 'triangle_multiplication_incoming': {
                     'dropout_rate': 0.25,
@@ -293,7 +293,7 @@ CONFIG = ml_collections.ConfigDict({
                     'num_intermediate_channel': 128,
                     'orientation': 'per_row',
                     'shared_dropout': True,
-                    'fuse_projection_weights': False,
+                    'fuse_projection_weights': True,
                 },
                 'pair_transition': {
                     'dropout_rate': 0.0,
@@ -355,7 +355,7 @@ CONFIG = ml_collections.ConfigDict({
                         'num_intermediate_channel': 64,
                         'orientation': 'per_row',
                         'shared_dropout': True,
-                        'fuse_projection_weights': False,
+                        'fuse_projection_weights': True,
                     },
                     'triangle_multiplication_incoming': {
                         'dropout_rate': 0.25,
@@ -363,7 +363,7 @@ CONFIG = ml_collections.ConfigDict({
                         'num_intermediate_channel': 64,
                         'orientation': 'per_row',
                         'shared_dropout': True,
-                        'fuse_projection_weights': False,
+                        'fuse_projection_weights': True,
                     },
                     'pair_transition': {
                         'dropout_rate': 0.0,
