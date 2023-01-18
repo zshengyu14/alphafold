@@ -120,6 +120,8 @@ def flat_params_to_haiku(params, fuse=True):
       if not fuse and f"{k}/center_norm" in P:
         for c in ["gate","projection"]:
           LR = P.pop(f"{k}/{c}")
+          P[f"{k}/left_{c}"] = {}
+          P[f"{k}/right_{c}"] = {}
           for d in ["bias","weights"]:
             half = LR[d].shape[-1] // 2
             P[f"{k}/left_{c}"][d] = LR[d][...,:half]
