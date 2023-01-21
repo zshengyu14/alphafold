@@ -132,7 +132,7 @@ CONFIG_DIFFS = {
 # Key differences between multimer v1/v2 and v3, mostly due to numerical
 # optimisations in the TriangleMultiplication module.
 common_updates = {
-    'model.model.num_recycle': 3,
+    'model.num_recycle': 3,
     'model.global_config.bfloat16': False,
     'model.embeddings_and_evoformer.num_msa': 252,
     'model.embeddings_and_evoformer.num_extra_msa': 1152,
