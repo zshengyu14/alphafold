@@ -134,6 +134,7 @@ CONFIG_DIFFS = {
 common_updates = {
     'model.num_recycle': 3,
     'model.global_config.bfloat16': False,
+    'model.recycle_early_stop_tolerance': 0.0,
     'model.embeddings_and_evoformer.num_msa': 252,
     'model.embeddings_and_evoformer.num_extra_msa': 1152,
 }
@@ -455,7 +456,8 @@ CONFIG = ml_collections.ConfigDict({
         },
         'num_recycle': 3,
         'recycle_tol': 0.0,
-        'resample_msa_in_recycling': True
+        'resample_msa_in_recycling': True,
+        'recycle_early_stop_tolerance': 0.0,
     },
 })
 
@@ -463,6 +465,7 @@ CONFIG = ml_collections.ConfigDict({
 CONFIG_MULTIMER = ml_collections.ConfigDict({
     'model': {
         'embeddings_and_evoformer': {
+            'use_cluster_profile': True,
             'evoformer_num_block': 48,
             'evoformer': {
                 'msa_column_attention': {

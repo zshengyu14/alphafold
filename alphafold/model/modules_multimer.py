@@ -201,27 +201,20 @@ def nearest_neighbor_clusters(batch, gap_agreement_weight=0.):
 
   return cluster_profile, cluster_deletion_mean
 
-
 def create_msa_feat(batch):
   """Create and concatenate MSA features."""
   msa_1hot = jax.nn.one_hot(batch['msa'], 23)
   deletion_matrix = batch['deletion_matrix']
   has_deletion = jnp.clip(deletion_matrix, 0., 1.)[..., None]
-  deletion_value = (jnp.arctan(deletion_matrix / 3.) * (2. / jnp.pi))[..., None]
-
-  deletion_mean_value = (jnp.arctan(batch['cluster_deletion_mean'] / 3.) *
-                         (2. / jnp.pi))[..., None]
-
+  enc = lambda x: (jnp.arctan(x / 3.) * (2. / jnp.pi))[..., None]
   msa_feat = [
       msa_1hot,
       has_deletion,
-      deletion_value,
-      batch['cluster_profile'],
-      deletion_mean_value
+      enc(deletion_matrix),
+      batch.get('cluster_profile',msa_1hot),
+      enc(batch.get('cluster_deletion_mean',deletion_matrix))
   ]
-
   return jnp.concatenate(msa_feat, axis=-1)
-
 
 def create_extra_msa_feature(batch, num_extra_msa):
   """Expand extra_msa into 1hot and concat with other extra msa features.
@@ -577,8 +570,10 @@ class EmbeddingsAndEvoformer(hk.Module):
       batch = sample_msa(sample_key, batch, c.num_msa)
       batch = make_masked_msa(batch, mask_key, c.masked_msa)
 
-      (batch['cluster_profile'],
-       batch['cluster_deletion_mean']) = nearest_neighbor_clusters(batch)
+      if c.use_cluster_profile:
+        (batch['cluster_profile'],
+         batch['cluster_deletion_mean']) = nearest_neighbor_clusters(batch)
+
 
       msa_feat = create_msa_feat(batch).astype(dtype)
 

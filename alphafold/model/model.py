@@ -20,6 +20,7 @@ from alphafold.common import confidence
 from alphafold.model import features
 from alphafold.model import modules
 from alphafold.model import modules_multimer
+from alphafold.common import residue_constants
 import haiku as hk
 import jax
 import ml_collections
@@ -196,14 +197,29 @@ class RunModel:
         sub_feat["prev"] = result["prev"]
         result, _ = self.apply(self.params, key, sub_feat)
         confidences = get_confidence_metrics(result, multimer_mode=self.multimer_mode)
+
         if self.config.model.stop_at_score_ranker == "plddt":
           mean_score = (confidences["plddt"] * feat["seq_mask"]).sum() / feat["seq_mask"].sum()
         else:
           mean_score = confidences["ptm"].mean()
+        
         result.update(confidences)
         r += 1
+
         if mean_score > self.config.model.stop_at_score:
             break
+
+        if self.config.model.recycle_early_stop_tolerance > 0:
+          ca_idx = residue_constants.atom_order['CA']
+          if r > 1:
+            # Early stopping criteria
+            pos = result["prev"]["prev_pos"][:,ca_idx]
+            dist = lambda x: np.sqrt(np.square(x[:,None]-x[None,:]).sum(-1))
+            sq_diff = np.square(dist(pos) - dist(prev_pos))
+            mask = feat["seq_mask"][:,None] * feat["seq_mask"][None,:]
+            diff = np.sqrt((sq_diff * mask).sum()/mask.sum())
+            if diff < self.config.model.recycle_early_stop_tolerance: break
+          prev_pos = result["prev"]["prev_pos"][:,ca_idx]
 
     logging.info('Output shape was %s', tree.map_structure(lambda x: x.shape, result))
     return result, (r-1)
