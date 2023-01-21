@@ -216,7 +216,8 @@ class RunModel:
             pos = result["prev"]["prev_pos"][:,ca_idx]
             dist = lambda x: np.sqrt(np.square(x[:,None]-x[None,:]).sum(-1))
             sq_diff = np.square(dist(pos) - dist(prev_pos))
-            mask = feat["seq_mask"][:,None] * feat["seq_mask"][None,:]
+            seq_mask = feat["seq_mask"] if self.multimer_mode else feat["seq_mask"][0]
+            mask = seq_mask[:,None] * seq_mask[None,:]
             diff = np.sqrt((sq_diff * mask).sum()/mask.sum())
             if diff < self.config.model.recycle_early_stop_tolerance: break
           prev_pos = result["prev"]["prev_pos"][:,ca_idx]
