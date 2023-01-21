@@ -136,10 +136,6 @@ common_updates = {
     'model.global_config.bfloat16': False,
     'model.embeddings_and_evoformer.num_msa': 252,
     'model.embeddings_and_evoformer.num_extra_msa': 1152,
-    'model.embeddings_and_evoformer.evoformer.triangle_multiplication_incoming.fuse_projection_weights': False,
-    'model.embeddings_and_evoformer.evoformer.triangle_multiplication_outgoing.fuse_projection_weights': False,
-    'model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_incoming.fuse_projection_weights': False,
-    'model.embeddings_and_evoformer.template.template_pair_stack.triangle_multiplication_outgoing.fuse_projection_weights': False,
 }
 CONFIG_DIFFS.update(
     {f'model_{i}_multimer': common_updates for i in range(1, 6)})
