@@ -69,9 +69,6 @@ class RunModel:
                config: ml_collections.ConfigDict,
                params: Optional[Mapping[str, Mapping[str, np.ndarray]]] = None,
                is_training = False):
-
-    # if is_training is on, enable dropouts
-    config.model.global_config.eval_dropout = is_training
     
     self.config = config
     self.params = params
@@ -81,13 +78,13 @@ class RunModel:
     if self.multimer_mode:
       def _forward_fn(batch):
         model = modules_multimer.AlphaFold(self.config.model)
-        return model(batch, is_training=False)
+        return model(batch, is_training=is_training)
     else:
       def _forward_fn(batch):
         model = modules.AlphaFold(self.config.model)
         return model(
             batch,
-            is_training=False,
+            is_training=is_training,
             compute_loss=False,
             ensemble_representations=True)
 
