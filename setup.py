@@ -26,7 +26,7 @@ setup(
     author='DeepMind',
     author_email='alphafold@deepmind.com',
     license='Apache License, Version 2.0',
-    url='https://github.com/steineggerlab/alphafold',
+    url='https://github.com/sokrypton/alphafold',
     packages=find_packages(),
     install_requires=[
         'absl-py',
@@ -59,4 +59,5 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
+    include_package_data=True,
 )
