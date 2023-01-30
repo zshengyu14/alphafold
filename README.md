@@ -61,8 +61,9 @@ Please follow these steps:
 
 1.  Download genetic databases and model parameters:
 
-    *   Install `aria2c` (on most Linux distributions it is available via the
-    package manager).
+    *   Install `aria2c`. On most Linux distributions it is available via the
+    package manager as the `aria2` package (on Debian-based distributions this
+    can be installed by running `sudo apt install aria2`).
 
     *   Please use the script `scripts/download_all_data.sh` to download
     and set up full databases. This may take substantial time (download size is
@@ -362,9 +363,11 @@ section.
       --output_dir=/home/user/absolute_path_to_the_output_dir
     ```
 
-1.  After generating the predicted model, by default AlphaFold runs a relaxation
-    step to improve geometrical quality. You can control this via `--run_relax=true`
-    (default) or `--run_relax=false`.
+1.  After generating the predicted model, AlphaFold runs a relaxation
+    step to improve local geometry. By default, only the best model (by
+    pLDDT) is relaxed (`--models_to_relax=best`), but also all of the models
+    (`--models_to_relax=all`) or none of the models (`--models_to_relax=none`)
+    can be relaxed.
 
 1.  The relaxation step can be run on GPU (faster, but could be less stable) or
     CPU (slow, but stable). This can be controlled with `--enable_gpu_relax=true`
