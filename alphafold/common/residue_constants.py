@@ -24,8 +24,8 @@ import tree
 
 # Internal import (35fd).
 
-
-stereo_chemical_props_path = 'alphafold/common/stereo_chemical_props.txt'
+from . import __file__ 
+stereo_chemical_props_path = os.path.join(os.path.dirname(__file__), f'stereo_chemical_props.txt')  
 
 # Distance from one CA to next CA [trans configuration: omega = 180].
 ca_ca = 3.80209737096
