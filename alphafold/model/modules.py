@@ -2018,9 +2018,9 @@ class SingleTemplateEmbedding(hk.Module):
     to_concat.append(jnp.tile(aatype[:, None, :], [1, num_res, 1]))
 
     n, ca, c = [residue_constants.atom_order[a] for a in ('N', 'CA', 'C')]
-    raw_atom_pos = template_batch["template_all_atom_positions"]
+    raw_atom_pos = batch['template_all_atom_positions']
     
-    if gc.bfloat16:
+    if self.global_config.bfloat16:
       raw_atom_pos = raw_atom_pos.astype(jnp.float32)
 
     rot, trans = quat_affine.make_transform_from_reference(
