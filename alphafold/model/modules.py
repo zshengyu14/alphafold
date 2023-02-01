@@ -122,6 +122,71 @@ def create_extra_msa_feature(batch):
               jnp.expand_dims(batch['extra_deletion_value'], axis=-1)]
   return jnp.concatenate(msa_feat, axis=-1)
 
+class AlphaFoldIteration_noE(hk.Module):
+  """A single recycling iteration of AlphaFold architecture."""
+  def __init__(self, config, global_config, name='alphafold_iteration'):
+    super().__init__(name=name)
+    self.config = config
+    self.global_config = global_config
+
+  def __call__(self, batch, is_training, **kwargs):
+
+    # Compute representations for each batch element and average.
+    evoformer_module = EmbeddingsAndEvoformer(self.config.embeddings_and_evoformer, self.global_config)
+    representations = evoformer_module(batch, is_training)    
+    
+    head_factory = {
+          'masked_msa': MaskedMsaHead,
+          'distogram': DistogramHead,
+          'structure_module': functools.partial(folding.StructureModule, compute_loss=False),
+          'predicted_lddt': PredictedLDDTHead,
+          'predicted_aligned_error': PredictedAlignedErrorHead,
+          'experimentally_resolved': ExperimentallyResolvedHead} 
+
+    heads = {}
+    for name, head_config in sorted(self.config.heads.items()):
+      if not head_config.weight: continue
+      heads[name] = head_factory[name](head_config, self.global_config)
+    
+    ret = {'representations':representations}
+    for name, head in heads.items():
+      if name in ('predicted_lddt', 'predicted_aligned_error'):
+        continue
+      else:
+        ret[name] = head(representations, batch, is_training)
+        if 'representations' in ret[name]:
+          representations.update(ret[name].pop('representations'))
+
+    for name in ('predicted_lddt', 'predicted_aligned_error'):
+      ret[name] = heads[name](representations, batch, is_training)
+    return ret
+
+class AlphaFold_noE(hk.Module):
+  """AlphaFold model"""
+  def __init__(self, config, name='alphafold'):
+    super().__init__(name=name)
+    self.config = config
+    self.global_config = config.global_config
+
+  def __call__(self, batch, is_training, return_representations=False, **kwargs):
+    """Run the AlphaFold model"""
+    impl = AlphaFoldIteration_noE(self.config, self.global_config)
+
+    def get_prev(ret):
+      new_prev = {
+          'prev_msa_first_row': ret['representations']['msa_first_row'],
+          'prev_pair': ret['representations']['pair'],
+          'prev_pos': ret['structure_module']['final_atom_positions']
+      }
+      return new_prev    
+
+    prev = batch.pop("prev")    
+    batch = jax.tree_map(lambda x:x[0], batch)
+    ret = impl(batch={**batch, **prev}, is_training=is_training)
+    ret["prev"] = get_prev(ret) 
+    if not return_representations:
+      del ret["representations"]
+    return ret
 
 class AlphaFoldIteration(hk.Module):
   """A single recycling iteration of AlphaFold architecture.
@@ -270,7 +335,6 @@ class AlphaFoldIteration(hk.Module):
     else:
       return ret
 
-
 class AlphaFold(hk.Module):
   """AlphaFold model with recycling.
 
@@ -354,8 +418,7 @@ class AlphaFold(hk.Module):
     if not return_representations:
       del (ret[0] if compute_loss else ret)['representations']  # pytype: disable=unsupported-operands
       
-    return ret, None
-
+    return ret
 
 class TemplatePairStack(hk.Module):
   """Pair stack for the templates.

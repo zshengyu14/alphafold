@@ -81,12 +81,16 @@ class RunModel:
         return model(batch, is_training=is_training)
     else:
       def _forward_fn(batch):
-        model = modules.AlphaFold(self.config.model)
-        return model(
-            batch,
-            is_training=is_training,
-            compute_loss=False,
-            ensemble_representations=True)
+        if self.config.data.eval.num_ensemble == 1:
+          model = modules.AlphaFold_noE(self.config.model)
+          return model(batch, is_training=is_training)
+        else:
+          model = modules.AlphaFold(self.config.model)
+          return model(
+              batch,
+              is_training=is_training,
+              compute_loss=False,
+              ensemble_representations=True)
 
     self.apply = jax.jit(hk.transform(_forward_fn).apply)
     self.init = jax.jit(hk.transform(_forward_fn).init)
@@ -192,7 +196,7 @@ class RunModel:
             sub_feat = jax.tree_map(lambda x:x[s:e], feat)
             
         sub_feat["prev"] = result["prev"]
-        result, _ = self.apply(self.params, key, sub_feat)
+        result = self.apply(self.params, key, sub_feat)
         confidences = get_confidence_metrics(result, multimer_mode=self.multimer_mode)
 
         if self.config.model.stop_at_score_ranker == "plddt":
