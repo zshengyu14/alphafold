@@ -458,7 +458,7 @@ class AlphaFold(hk.Module):
     
     if not return_representations:
       del ret['representations']
-    return ret, None
+    return ret
 
 class EmbeddingsAndEvoformer(hk.Module):
   """Embeds the input data and runs Evoformer.
