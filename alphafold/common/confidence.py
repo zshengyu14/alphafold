@@ -136,10 +136,10 @@ def predicted_tm_score(
     residue_weights = np.ones(logits.shape[0])
 
   bin_centers = _calculate_bin_centers(breaks)
+  num_res = residue_weights.shape[0]
 
-  num_res = int(np.sum(residue_weights))
   # Clip num_res to avoid negative/undefined d0.
-  clipped_num_res = max(num_res, 19)
+  clipped_num_res = max(np.sum(residue_weights), 19)
 
   # Compute d_0(num_res) as defined by TM-score, eqn. (5) in Yang & Skolnick
   # "Scoring function for automated assessment of protein structure template
@@ -154,15 +154,14 @@ def predicted_tm_score(
   # E_distances tm(distance).
   predicted_tm_term = np.sum(probs * tm_per_bin, axis=-1)
 
-  pair_mask = np.ones(shape=(num_res, num_res), dtype=bool)
   if interface:
-    pair_mask *= asym_id[:, None] != asym_id[None, :]
+    pair_mask = asym_id[:, None] != asym_id[None, :]
+  else:
+    pair_mask = np.ones((num_res,num_res), dtype=bool)
 
   predicted_tm_term *= pair_mask
 
-  pair_residue_weights = pair_mask * (
-      residue_weights[None, :] * residue_weights[:, None])
-  normed_residue_mask = pair_residue_weights / (1e-8 + np.sum(
-      pair_residue_weights, axis=-1, keepdims=True))
+  pair_residue_weights = pair_mask * (residue_weights[None, :] * residue_weights[:, None])
+  normed_residue_mask = pair_residue_weights / (1e-8 + np.sum(pair_residue_weights, axis=-1, keepdims=True))
   per_alignment = np.sum(predicted_tm_term * normed_residue_mask, axis=-1)
   return np.asarray(per_alignment[(per_alignment * residue_weights).argmax()])

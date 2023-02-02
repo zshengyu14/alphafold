@@ -28,27 +28,30 @@ import numpy as np
 import tensorflow.compat.v1 as tf
 import tree
 
-
 def get_confidence_metrics(
     prediction_result: Mapping[str, Any],
+    mask: Any,
     multimer_mode: bool) -> Mapping[str, Any]:
-  """Post processes prediction_result to get confidence metrics."""
+  """Post processes prediction_result to get confidence metrics."""  
   confidence_metrics = {}
-  confidence_metrics['plddt'] = confidence.compute_plddt(
-      prediction_result['predicted_lddt']['logits'])
+  confidence_metrics['plddt'] = confidence.compute_plddt(prediction_result['predicted_lddt']['logits'])
   if 'predicted_aligned_error' in prediction_result:
     confidence_metrics.update(confidence.compute_predicted_aligned_error(
         logits=prediction_result['predicted_aligned_error']['logits'],
         breaks=prediction_result['predicted_aligned_error']['breaks']))
+    
     confidence_metrics['ptm'] = confidence.predicted_tm_score(
         logits=prediction_result['predicted_aligned_error']['logits'],
         breaks=prediction_result['predicted_aligned_error']['breaks'],
+        residue_weights=mask,
         asym_id=None)
+    
     if multimer_mode:
       # Compute the ipTM only for the multimer model.
       confidence_metrics['iptm'] = confidence.predicted_tm_score(
           logits=prediction_result['predicted_aligned_error']['logits'],
           breaks=prediction_result['predicted_aligned_error']['breaks'],
+          residue_weights=mask,
           asym_id=prediction_result['predicted_aligned_error']['asym_id'],
           interface=True)
       confidence_metrics['ranking_confidence'] = (
@@ -197,10 +200,11 @@ class RunModel:
             
         sub_feat["prev"] = result["prev"]
         result = self.apply(self.params, key, sub_feat)
-        confidences = get_confidence_metrics(result, multimer_mode=self.multimer_mode)
+        seq_mask = feat["seq_mask"] if self.multimer_mode else feat["seq_mask"][0]
+        confidences = get_confidence_metrics(result, mask=seq_mask, multimer_mode=self.multimer_mode)
 
         if self.config.model.stop_at_score_ranker == "plddt":
-          mean_score = (confidences["plddt"] * feat["seq_mask"]).sum() / feat["seq_mask"].sum()
+          mean_score = (confidences["plddt"] * seq_mask).sum() / seq_mask.sum()
         else:
           mean_score = confidences["ptm"].mean()
         
@@ -217,9 +221,8 @@ class RunModel:
             pos = result["prev"]["prev_pos"][:,ca_idx]
             dist = lambda x: np.sqrt(np.square(x[:,None]-x[None,:]).sum(-1))
             sq_diff = np.square(dist(pos) - dist(prev_pos))
-            seq_mask = feat["seq_mask"] if self.multimer_mode else feat["seq_mask"][0]
-            mask = seq_mask[:,None] * seq_mask[None,:]
-            diff = np.sqrt((sq_diff * mask).sum()/mask.sum())
+            mask_2d = seq_mask[:,None] * seq_mask[None,:]
+            diff = np.sqrt((sq_diff * mask_2d).sum()/mask_2d.sum())
             if diff < self.config.model.recycle_early_stop_tolerance: break
           prev_pos = result["prev"]["prev_pos"][:,ca_idx]
 
