@@ -159,6 +159,9 @@ class AlphaFoldIteration_noE(hk.Module):
 
     for name in ('predicted_lddt', 'predicted_aligned_error'):
       ret[name] = heads[name](representations, batch, is_training)
+      if name == 'predicted_aligned_error' and "asym_id" in batch:
+        ret[name]['asym_id'] = batch['asym_id']
+
     return ret
 
 class AlphaFold_noE(hk.Module):
@@ -327,6 +330,8 @@ class AlphaFoldIteration(hk.Module):
       # Feed all previous results to give access to structure_module result.
       head_config, module = heads[name]
       ret[name] = module(representations, batch, is_training)
+      if "asym_id" in batch:
+        ret[name]['asym_id'] = batch['asym_id']
       if compute_loss:
         total_loss += loss(module, head_config, ret, name, filter_ret=False)
 

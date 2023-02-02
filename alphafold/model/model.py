@@ -31,10 +31,14 @@ import tree
 def get_confidence_metrics(
     prediction_result: Mapping[str, Any],
     mask: Any,
-    multimer_mode: bool) -> Mapping[str, Any]:
+    rank_by: str = "auto") -> Mapping[str, Any]:
   """Post processes prediction_result to get confidence metrics."""  
   confidence_metrics = {}
-  confidence_metrics['plddt'] = confidence.compute_plddt(prediction_result['predicted_lddt']['logits'])
+
+  plddt = confidence.compute_plddt(prediction_result['predicted_lddt']['logits'])
+  confidence_metrics['plddt'] = plddt  
+  confidence_metrics["mean_plddt"] = (plddt * mask).sum()/mask.sum()
+
   if 'predicted_aligned_error' in prediction_result:
     confidence_metrics.update(confidence.compute_predicted_aligned_error(
         logits=prediction_result['predicted_aligned_error']['logits'],
@@ -43,25 +47,35 @@ def get_confidence_metrics(
     confidence_metrics['ptm'] = confidence.predicted_tm_score(
         logits=prediction_result['predicted_aligned_error']['logits'],
         breaks=prediction_result['predicted_aligned_error']['breaks'],
-        residue_weights=mask,
-        asym_id=None)
-    
-    if multimer_mode:
+        residue_weights=mask)    
+
+    asym_id = prediction_result["predicted_aligned_error"].get("asym_id",None)
+    if asym_id is not None and np.unique(asym_id).shape[0] > 1:
       # Compute the ipTM only for the multimer model.
       confidence_metrics['iptm'] = confidence.predicted_tm_score(
           logits=prediction_result['predicted_aligned_error']['logits'],
           breaks=prediction_result['predicted_aligned_error']['breaks'],
-          residue_weights=mask,
-          asym_id=prediction_result['predicted_aligned_error']['asym_id'],
-          interface=True)
-      confidence_metrics['ranking_confidence'] = (
-          0.8 * confidence_metrics['iptm'] + 0.2 * confidence_metrics['ptm'])
+          residue_weights=mask, asym_id=asym_id)
 
-  if not multimer_mode:
-    # Monomer models use mean pLDDT for model ranking.
-    confidence_metrics['ranking_confidence'] = np.mean(
-        confidence_metrics['plddt'])
+    # decide what metric to use for the mean_score
+    if rank_by == "auto":
+      if  "iptm" in confidence_metrics:
+        rank_by = "multimer"
+      elif "ptm" in confidence_metrics:
+        rank_by = "ptm"
+      else:
+        rank_by = "plddt"
+    else:
+      if rank_by in ["multimer","iptm"] and "iptm" not in confidence_metrics: rank_by = "ptm"
+      if rank_by == "ptm" and "ptm" not in confidence_metrics: rank_by = "plddt"
 
+    # compute mean_score
+    if rank_by == "multimer": mean_score = 80 * confidence_metrics["iptm"] + 20 * confidence_metrics["ptm"]
+    if rank_by == "iptm":     mean_score = 100 * confidence_metrics["iptm"]
+    if rank_by == "ptm":      mean_score = 100 * confidence_metrics["ptm"]
+    if rank_by == "plddt":    mean_score = confidence_metrics["mean_plddt"]
+    confidence_metrics["ranking_confidence"] = mean_score
+  
   return confidence_metrics
 
 
@@ -158,7 +172,8 @@ class RunModel:
   def predict(self,
               feat: features.FeatureDict,
               random_seed: int = 0,
-              ) -> Mapping[str, Any]:
+              verbose: bool = False,
+              prediction_callback: Any = None) -> Mapping[str, Any]:
     """Makes a prediction by inferencing the model on the provided features.
 
     Args:
@@ -189,6 +204,7 @@ class RunModel:
         
     r = 0
     key = jax.random.PRNGKey(random_seed)
+    stop = False
     while r < num_iters:
         if self.multimer_mode:
             sub_feat = feat
@@ -201,30 +217,34 @@ class RunModel:
         sub_feat["prev"] = result["prev"]
         result = self.apply(self.params, key, sub_feat)
         seq_mask = feat["seq_mask"] if self.multimer_mode else feat["seq_mask"][0]
-        confidences = get_confidence_metrics(result, mask=seq_mask, multimer_mode=self.multimer_mode)
+        confidences = get_confidence_metrics(result, mask=seq_mask, rank_by=self.config.model.rank_by)
 
-        if self.config.model.stop_at_score_ranker == "plddt":
-          mean_score = (confidences["plddt"] * seq_mask).sum() / seq_mask.sum()
-        else:
-          mean_score = confidences["ptm"].mean()
-        
-        result.update(confidences)
-        r += 1
-
-        if mean_score > self.config.model.stop_at_score:
-            break
+        if confidences["ranking_confidence"] > self.config.model.stop_at_score:
+            stop = True
 
         if self.config.model.recycle_early_stop_tolerance > 0:
           ca_idx = residue_constants.atom_order['CA']
-          if r > 1:
+          if r > 0:
             # Early stopping criteria
             pos = result["prev"]["prev_pos"][:,ca_idx]
             dist = lambda x: np.sqrt(np.square(x[:,None]-x[None,:]).sum(-1))
             sq_diff = np.square(dist(pos) - dist(prev_pos))
             mask_2d = seq_mask[:,None] * seq_mask[None,:]
-            diff = np.sqrt((sq_diff * mask_2d).sum()/mask_2d.sum())
-            if diff < self.config.model.recycle_early_stop_tolerance: break
+            confidences["diff"] = np.sqrt((sq_diff * mask_2d).sum()/mask_2d.sum())
+            if confidences["diff"] < self.config.model.recycle_early_stop_tolerance:
+              stop = True
           prev_pos = result["prev"]["prev_pos"][:,ca_idx]
+        
+        result.update(confidences)
+        if prediction_callback is not None: prediction_callback(result, r)
+
+        if verbose:
+          print_line = f"recycle={r} plddt={confidences['mean_plddt']:.3g}"
+          for k in ["ptm","iptm","diff"]:
+            if k in confidences: print_line += f" {k}:{confidences[k]:.3g}"
+          print(print_line)
+        r += 1
+        if stop: break
 
     logging.info('Output shape was %s', tree.map_structure(lambda x: x.shape, result))
     return result, (r-1)

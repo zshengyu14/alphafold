@@ -112,8 +112,7 @@ def predicted_tm_score(
     logits: np.ndarray,
     breaks: np.ndarray,
     residue_weights: Optional[np.ndarray] = None,
-    asym_id: Optional[np.ndarray] = None,
-    interface: bool = False) -> np.ndarray:
+    asym_id: Optional[np.ndarray] = None) -> np.ndarray:
   """Computes predicted TM alignment or predicted interface TM alignment score.
 
   Args:
@@ -123,8 +122,7 @@ def predicted_tm_score(
     residue_weights: [num_res] the per residue weights to use for the
       expectation.
     asym_id: [num_res] the asymmetric unit ID - the chain ID. Only needed for
-      ipTM calculation, i.e. when interface=True.
-    interface: If True, interface predicted TM score is computed.
+      ipTM calculation.
 
   Returns:
     ptm_score: The predicted TM alignment or the predicted iTM score.
@@ -154,10 +152,10 @@ def predicted_tm_score(
   # E_distances tm(distance).
   predicted_tm_term = np.sum(probs * tm_per_bin, axis=-1)
 
-  if interface:
-    pair_mask = asym_id[:, None] != asym_id[None, :]
-  else:
+  if asym_id is None:
     pair_mask = np.ones((num_res,num_res), dtype=bool)
+  else:
+    pair_mask = asym_id[:, None] != asym_id[None, :]
 
   predicted_tm_term *= pair_mask
 

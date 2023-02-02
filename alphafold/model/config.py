@@ -222,7 +222,8 @@ CONFIG = ml_collections.ConfigDict({
                 'template_pseudo_beta': [NUM_TEMPLATES, NUM_RES, None],
                 'template_pseudo_beta_mask': [NUM_TEMPLATES, NUM_RES],
                 'template_sum_probs': [NUM_TEMPLATES, None],
-                'true_msa': [NUM_MSA_SEQ, NUM_RES]
+                'true_msa': [NUM_MSA_SEQ, NUM_RES],
+                'asym_id': [NUM_RES],
             },
             'fixed_size': True,
             'subsample_templates': False,  # We want top templates.
@@ -456,9 +457,10 @@ CONFIG = ml_collections.ConfigDict({
                 'weight': 2.0
             },
         },
-        'num_recycle': 3,
-        'recycle_tol': 0.0,
+        'stop_at_score': 100.0,
+        'rank_by': 'plddt',
         'resample_msa_in_recycling': True,
+        'num_recycle': 3,
         'recycle_early_stop_tolerance': 0.0,
     },
 })
@@ -691,14 +693,14 @@ CONFIG_MULTIMER = ml_collections.ConfigDict({
             }
         },
         'stop_at_score': 100.0,
-        'stop_at_score_ranker': 'plddt',
+        'rank_by': 'multimer',
         'num_ensemble_eval': 1,
-        'num_recycle': 20,
         # A negative value indicates that no early stopping will occur, i.e.
         # the model will always run `num_recycle` number of recycling
         # iterations.  A positive value will enable early stopping if the
         # difference in pairwise distances is less than the tolerance between
         # recycling steps.
+        'num_recycle': 20,
         'recycle_early_stop_tolerance': 0.5,
         'resample_msa_in_recycling': True
     }
