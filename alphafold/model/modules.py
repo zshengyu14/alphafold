@@ -1875,13 +1875,12 @@ class EmbeddingsAndEvoformer(hk.Module):
       if c.max_relative_feature:
         # Add one-hot-encoded clipped residue distances to the pair activations.
         pos = batch['residue_index']
-        offset = pos[:, None] - pos[None, :]
-        rel_pos = jax.nn.one_hot(
-            jnp.clip(
-                offset + c.max_relative_feature,
-                a_min=0,
-                a_max=2 * c.max_relative_feature),
-            2 * c.max_relative_feature + 1).astype(dtype)
+        offset = pos[:,None] - pos[None,:]
+        offset = jnp.clip(offset + c.max_relative_feature, a_min=0, a_max=2 * c.max_relative_feature)
+        if "asym_id" in batch:
+          o = batch['asym_id'][:,None] - batch['asym_id'][None,:]
+          offset = jnp.where(o == 0, offset, jnp.where(o > 0, 2*c.max_relative_feature, 0))
+        rel_pos = jax.nn.one_hot(offset, 2 * c.max_relative_feature + 1).astype(dtype)
         pair_activations += common_modules.Linear(
             c.pair_channel, name='pair_activiations')(rel_pos)
 
