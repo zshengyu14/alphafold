@@ -208,14 +208,14 @@ class RunModel:
     while r < num_iters:
         if self.multimer_mode:
             sub_feat = feat
-            sub_feat["iter"] = np.array(r)
         else:
             s = r * num_ensemble
             e = (r+1) * num_ensemble
             sub_feat = jax.tree_map(lambda x:x[s:e], feat)
             
         sub_feat["prev"] = result["prev"]
-        result = self.apply(self.params, key, sub_feat)
+        key, sub_key = jax.random.split(key)
+        result = self.apply(self.params, sub_key, sub_feat)
         seq_mask = feat["seq_mask"] if self.multimer_mode else feat["seq_mask"][0]
         confidences = get_confidence_metrics(result, mask=seq_mask, rank_by=self.config.model.rank_by)
 
