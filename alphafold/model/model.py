@@ -235,12 +235,8 @@ class RunModel:
               stop = True
           prev_pos = result["prev"]["prev_pos"][:,ca_idx]
         
-        # keep the raw outputs
-        result["raw"] = {}
-        for k,v in confidences.items():
-          if k in result:
-            result["raw"][k] = result.pop(k)
-          result[k] = v
+        result["pae"] = result.pop("predicted_aligned_error")
+        result.update(confidences)
         
         if prediction_callback is not None:
           prediction_callback(result, r)
