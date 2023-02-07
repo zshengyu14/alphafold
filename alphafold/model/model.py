@@ -235,13 +235,20 @@ class RunModel:
               stop = True
           prev_pos = result["prev"]["prev_pos"][:,ca_idx]
         
-        result.update(confidences)
-        if prediction_callback is not None: prediction_callback(result, r)
+        # keep the raw outputs
+        result["raw"] = {}
+        for k,v in confidences.items():
+          if k in result:
+            result["raw"][k] = result.pop(k)
+          result[k] = v
+        
+        if prediction_callback is not None:
+          prediction_callback(result, r)
 
         if verbose:
           print_line = f"recycle={r} plddt={confidences['mean_plddt']:.3g}"
           for k in ["ptm","iptm","diff"]:
-            if k in confidences: print_line += f" {k}:{confidences[k]:.3g}"
+            if k in confidences: print_line += f" {k}={confidences[k]:.3g}"
           print(print_line)
         r += 1
         if stop: break
