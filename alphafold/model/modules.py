@@ -183,8 +183,13 @@ class AlphaFold_noE(hk.Module):
       }
       return new_prev    
 
-    prev = batch.pop("prev")    
+    prev = batch.pop("prev",None)
     batch = jax.tree_map(lambda x:x[0], batch)
+    if prev is None:
+      L = batch["aatype"].shape[0]
+      prev = {'prev_msa_first_row': jnp.zeros([L,256]),
+              'prev_pair': jnp.zeros([L,L,128]),
+              'prev_pos': jnp.zeros([L,37,3])}
     ret = impl(batch={**batch, **prev}, is_training=is_training)
     ret["prev"] = get_prev(ret) 
     if not return_representations:
@@ -413,8 +418,15 @@ class AlphaFold(hk.Module):
           compute_loss=compute_loss,
           ensemble_representations=ensemble_representations)
 
-    emb_config = self.config.embeddings_and_evoformer    
-    ret = do_call(prev=batch.pop("prev"), recycle_idx=0)
+    emb_config = self.config.embeddings_and_evoformer
+    prev = batch.pop("prev",None)
+    if prev is None:
+      L = num_residues
+      prev = {'prev_msa_first_row': jnp.zeros([L,256]),
+              'prev_pair': jnp.zeros([L,L,128]),
+              'prev_pos': jnp.zeros([L,37,3])}
+
+    ret = do_call(prev=prev, recycle_idx=0)
     ret["prev"] = get_prev(ret)
     
     if compute_loss:
