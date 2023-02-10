@@ -184,7 +184,8 @@ class AlphaFold_noE(hk.Module):
       return new_prev    
 
     prev = batch.pop("prev",None)
-    batch = jax.tree_map(lambda x:x[0], batch)
+    if batch["aatype"].ndim == 2:
+      batch = jax.tree_map(lambda x:x[0], batch)
     if prev is None:
       L = batch["aatype"].shape[0]
       prev = {'prev_msa_first_row': jnp.zeros([L,256]),
