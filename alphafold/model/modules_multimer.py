@@ -442,17 +442,7 @@ class AlphaFold(hk.Module):
           batch=recycled_batch,
           is_training=is_training,
           safe_key=safe_key)
-    
-    #########################################
-    num_iter = c.num_recycle
-    def key_body(i, k):
-      k_ = jax.random.split(k[0])
-      o = jax.lax.cond(i==num_iter, lambda _:k[0], lambda _:k_[1], None)
-      return [k_[0],o]
-    k = safe_key.get()
-    safe_key = prng.SafeKey(jax.lax.fori_loop(0,batch.pop("iter")+1, key_body, [k,k])[1])
-    ##########################################
-    
+        
     ret = apply_network(prev=batch.pop("prev"), safe_key=safe_key)
     ret["prev"] = get_prev(ret)
     

@@ -208,14 +208,14 @@ class RunModel:
     while r < num_iters:
         if self.multimer_mode:
             sub_feat = feat
-            sub_feat["iter"] = np.array(r)
         else:
             s = r * num_ensemble
             e = (r+1) * num_ensemble
             sub_feat = jax.tree_map(lambda x:x[s:e], feat)
             
         sub_feat["prev"] = result["prev"]
-        result = self.apply(self.params, key, sub_feat)
+        key, sub_key = jax.random.split(key)
+        result = self.apply(self.params, sub_key, sub_feat)
         seq_mask = feat["seq_mask"] if self.multimer_mode else feat["seq_mask"][0]
         confidences = get_confidence_metrics(result, mask=seq_mask, rank_by=self.config.model.rank_by)
 
@@ -235,13 +235,16 @@ class RunModel:
               stop = True
           prev_pos = result["prev"]["prev_pos"][:,ca_idx]
         
+        result["pae"] = result.pop("predicted_aligned_error")
         result.update(confidences)
-        if prediction_callback is not None: prediction_callback(result, r)
+        
+        if prediction_callback is not None:
+          prediction_callback(result, r)
 
         if verbose:
           print_line = f"recycle={r} plddt={confidences['mean_plddt']:.3g}"
           for k in ["ptm","iptm","diff"]:
-            if k in confidences: print_line += f" {k}:{confidences[k]:.3g}"
+            if k in confidences: print_line += f" {k}={confidences[k]:.3g}"
           print(print_line)
         r += 1
         if stop: break
