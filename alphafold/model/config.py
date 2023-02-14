@@ -133,7 +133,6 @@ CONFIG_DIFFS = {
 # optimisations in the TriangleMultiplication module.
 common_updates = {
     'model.num_recycle': 3,
-    'model.global_config.bfloat16': False,
     'model.recycle_early_stop_tolerance': 0.0,
     'model.embeddings_and_evoformer.num_msa': 252,
     'model.embeddings_and_evoformer.num_extra_msa': 1152,
@@ -378,8 +377,8 @@ CONFIG = ml_collections.ConfigDict({
             }
         },
         'global_config': {
-            'bfloat16': False,
-            'bfloat16_output': False,
+            'bfloat16': True,
+            'bfloat16_output': True,
             'deterministic': False,
             'multimer_mode': False,
             'subbatch_size': 4,
@@ -617,7 +616,7 @@ CONFIG_MULTIMER = ml_collections.ConfigDict({
         },
         'global_config': {
             'bfloat16': True,
-            'bfloat16_output': False,
+            'bfloat16_output': True,
             'deterministic': False,
             'multimer_mode': True,
             'subbatch_size': 4,
