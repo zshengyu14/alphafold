@@ -17,7 +17,19 @@
 import jax.numpy as jnp
 import jax
 import numpy as np
+from alphafold.common import residue_constants
 import scipy.special
+
+def compute_tol(prev_pos, current_pos, mask, use_jnp=False):
+    # Early stopping criteria based on criteria used in
+    # AF2Complex: https://www.nature.com/articles/s41467-022-29394-2    
+    _np = jnp if use_jnp else np
+    dist = lambda x:_np.sqrt(((x[:,None] - x[None,:])**2).sum(-1))
+    ca_idx = residue_constants.atom_order['CA']
+    sq_diff = _np.square(dist(prev_pos[:,ca_idx])-dist(current_pos[:,ca_idx]))
+    mask_2d = mask[:,None] * mask[None,:]
+    return _np.sqrt((sq_diff * mask_2d).sum()/mask_2d.sum() + 1e-8)
+
 
 def compute_plddt(logits, use_jnp=False):
   """Computes per-residue pLDDT from logits.

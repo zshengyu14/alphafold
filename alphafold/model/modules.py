@@ -182,12 +182,19 @@ class AlphaFold_noE(hk.Module):
     prev = batch.pop("prev",None)
     if batch["aatype"].ndim == 2:
       batch = jax.tree_map(lambda x:x[0], batch)
+
+    # initialize
     if prev is None:
-      L = batch["aatype"].shape[0]
-      dtype = jnp.bfloat16 if self.global_config.bfloat16 else jnp.float32
-      prev = {'prev_msa_first_row': jnp.zeros([L,256],  dtype=dtype),
-              'prev_pair':          jnp.zeros([L,L,128],dtype=dtype),
+
+      L = num_residues
+      prev = {'prev_msa_first_row': jnp.zeros([L,256]),
+              'prev_pair':          jnp.zeros([L,L,128]),
               'prev_pos':           jnp.zeros([L,37,3])}
+    else:
+      for k,v in prev.items():
+        if v.dtype == jnp.float16:
+          prev[k] = v.astype(jnp.float32)
+
     
     ret = impl(batch={**batch, **prev}, is_training=is_training)
     ret["prev"] = get_prev(ret)
@@ -200,7 +207,13 @@ class AlphaFold_noE(hk.Module):
       mask=batch["seq_mask"],
       rank_by=self.config.rank_by,
       use_jnp=True))
-    
+      
+    ret["tol"] = confidence.compute_tol(
+      prev["prev_pos"], 
+      ret["prev"]["prev_pos"],
+      batch["seq_mask"], 
+      use_jnp=True)
+
     return ret
 
 class AlphaFoldIteration(hk.Module):
@@ -426,13 +439,18 @@ class AlphaFold(hk.Module):
           ensemble_representations=ensemble_representations)
 
     emb_config = self.config.embeddings_and_evoformer
-    prev = batch.pop("prev", None)
+    # initialize
+    prev = batch.pop("prev", None)    
     if prev is None:
       L = num_residues
-      dtype = jnp.bfloat16 if self.global_config.bfloat16 else jnp.float32
-      prev = {'prev_msa_first_row': jnp.zeros([L,256],  dtype=dtype),
-              'prev_pair':          jnp.zeros([L,L,128],dtype=dtype),
+      prev = {'prev_msa_first_row': jnp.zeros([L,256]),
+              'prev_pair':          jnp.zeros([L,L,128]),
               'prev_pos':           jnp.zeros([L,37,3])}
+    else:
+      for k,v in prev.items():
+        if v.dtype == jnp.float16:
+          prev[k] = v.astype(jnp.float32)
+
 
     ret = do_call(prev=prev, recycle_idx=0)
     ret["prev"] = get_prev(ret)
@@ -446,9 +464,15 @@ class AlphaFold(hk.Module):
     # add confidence metrics
     ret.update(confidence.get_confidence_metrics(
       prediction_result=ret,
-      mask=batch["seq_mask"],
+      mask=batch["seq_mask"][0],
       rank_by=self.config.rank_by,
-      use_jnp=True))      
+      use_jnp=True))
+      
+    ret["tol"] = confidence.compute_tol(
+      prev["prev_pos"], 
+      ret["prev"]["prev_pos"],
+      batch["seq_mask"][0], 
+      use_jnp=True)
 
     return ret
 

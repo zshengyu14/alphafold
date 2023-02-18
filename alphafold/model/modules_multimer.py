@@ -442,8 +442,20 @@ class AlphaFold(hk.Module):
           batch=recycled_batch,
           is_training=is_training,
           safe_key=safe_key)
-        
-    ret = apply_network(prev=batch.pop("prev"), safe_key=safe_key)
+    
+    # initialize
+    prev = batch.pop("prev", None)    
+    if prev is None:
+      L = num_residues
+      prev = {'prev_msa_first_row': jnp.zeros([L,256]),
+              'prev_pair':          jnp.zeros([L,L,128]),
+              'prev_pos':           jnp.zeros([L,37,3])}
+    else:
+      for k,v in prev.items():
+        if v.dtype == jnp.float16:
+          prev[k] = v.astype(jnp.float32)
+
+    ret = apply_network(prev=prev, safe_key=safe_key)
     ret["prev"] = get_prev(ret)
     
     if not return_representations:
@@ -455,6 +467,12 @@ class AlphaFold(hk.Module):
       mask=batch["seq_mask"],
       rank_by=self.config.rank_by,
       use_jnp=True))
+
+    ret["tol"] = confidence.compute_tol(
+      prev["prev_pos"], 
+      ret["prev"]["prev_pos"],
+      batch["seq_mask"], 
+      use_jnp=True)
 
     return ret
 
