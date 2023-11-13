@@ -34,14 +34,14 @@ setup(
         'chex',
         'dm-haiku',
         'dm-tree',
-        'docker',
+        #'docker',
         'immutabledict',
         'jax',
         'ml-collections',
         'numpy',
         'pandas',
         'scipy',
-        'tensorflow-cpu',
+        #'tensorflow-cpu',
     ],
     tests_require=[
         'matplotlib',  # For notebook_utils_test.
