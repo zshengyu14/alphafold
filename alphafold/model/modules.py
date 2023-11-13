@@ -672,6 +672,8 @@ class Attention(hk.Module):
     logits = jnp.einsum('bqhc,bkhc->bhqk', q, k) + bias
     if nonbatched_bias is not None:
       logits += jnp.expand_dims(nonbatched_bias, axis=0)
+    # fix NaN's in jax >= 0.4, different fix than in AF2
+    logits = jnp.clip(logits, -1e8, 1e8)
     weights = jax.nn.softmax(logits)
     weighted_avg = jnp.einsum('bhqk,bkhc->bqhc', weights, v)
 
@@ -771,6 +773,8 @@ class GlobalAttention(hk.Module):
     k = jnp.einsum('bka,ac->bkc', m_data, k_weights)
     bias = (1e9 * (q_mask[:, None, :, 0] - 1.))
     logits = jnp.einsum('bhc,bkc->bhk', q, k) + bias
+    # fix NaN's in jax >= 0.4, different fix than in AF2
+    logits = jnp.clip(logits, -1e8, 1e8)
     weights = jax.nn.softmax(logits)
     weighted_avg = jnp.einsum('bhk,bkc->bhc', weights, v)
 
