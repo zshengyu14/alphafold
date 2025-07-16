@@ -46,19 +46,19 @@ class RunModel:
     if self.multimer_mode:
       def _forward_fn(batch):
         model = modules_multimer.AlphaFold(self.config.model)
-        return model(batch, is_training=is_training)
+        return model(batch, is_training=is_training, return_representations=True)
     else:
       def _forward_fn(batch):
         if self.config.data.eval.num_ensemble == 1:
           model = modules.AlphaFold_noE(self.config.model)
-          return model(batch, is_training=is_training)
+          return model(batch, is_training=is_training, return_representations=True)
         else:
           model = modules.AlphaFold(self.config.model)
           return model(
               batch,
               is_training=is_training,
               compute_loss=False,
-              ensemble_representations=True)
+              ensemble_representations=True, return_representations=True)
 
     self.apply = jax.jit(hk.transform(_forward_fn).apply)
     self.init = jax.jit(hk.transform(_forward_fn).init)
@@ -185,10 +185,11 @@ class RunModel:
         key, sub_key = jax.random.split(key)
         result, prev = run(sub_key, sub_feat, prev)
         
-        if return_representations:
-
-          result["representations"] = {"pair":   prev["prev_pair"],
-                                       "single": prev["prev_msa_first_row"]}
+        if not return_representations:
+          # remove representations from result
+          del result["representations"]
+          # result["representations"] = {"pair":   prev["prev_pair"],
+          #                              "single": prev["prev_msa_first_row"]}
                                        
         # callback
         if callback is not None: callback(result, r)
